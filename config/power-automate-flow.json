@@ -1,0 +1,94 @@
+{
+  "description": "Power Automate flow definition template: receives vendor documents from Outlook and drives extraction + Business Central update. Recreate in the Power Automate designer or import as a package; replace the <placeholders>.",
+  "trigger": {
+    "type": "Office365Outlook.WhenANewEmailArrivesV3",
+    "inputs": {
+      "mailbox": "vendor-invoices@yourcompany.example.com",
+      "folder": "Inbox",
+      "onlyWithAttachment": true,
+      "includeAttachments": true,
+      "subjectFilter": ""
+    }
+  },
+  "actions": [
+    {
+      "name": "Get_vendor_from_store",
+      "type": "Dataverse.ListRows",
+      "inputs": {
+        "table": "cr123_vendors",
+        "filter": "cr123_emaildomain eq '@{split(triggerOutputs()?['body/from'], '@')[1]}' and statecode eq 0"
+      },
+      "comment": "Vendor store is the Dataverse table maintained by the Power Apps canvas app."
+    },
+    {
+      "name": "Reject_unknown_vendor",
+      "type": "If",
+      "expression": "@equals(length(outputs('Get_vendor_from_store')?['body/value']), 0)",
+      "ifTrue": [
+        {
+          "name": "Move_to_quarantine",
+          "type": "Office365Outlook.MoveEmail",
+          "inputs": { "messageId": "@triggerOutputs()?['body/id']", "folder": "Quarantine" }
+        },
+        { "name": "Terminate_skipped", "type": "Terminate", "inputs": { "status": "Cancelled" } }
+      ]
+    },
+    {
+      "name": "Extract_with_Copilot_Studio",
+      "type": "CopilotStudio.InvokeDocumentProcessingModel",
+      "inputs": {
+        "model": "<copilot-studio-document-model-id>",
+        "document": "@{first(triggerOutputs()?['body/attachments'])}"
+      },
+      "comment": "Copilot Studio document processing (AI Builder invoice/custom model)."
+    },
+    {
+      "name": "Create_purchase_invoice_in_BC",
+      "type": "BusinessCentral.CreateRecord",
+      "inputs": {
+        "environment": "production",
+        "company": "CRONUS International Ltd.",
+        "table": "purchaseInvoices",
+        "fields": {
+          "number": "@{outputs('Extract_with_Copilot_Studio')?['body/invoice_number']}",
+          "vendorNumber": "@{first(outputs('Get_vendor_from_store')?['body/value'])?['cr123_bc_vendornumber']}",
+          "invoiceDate": "@{outputs('Extract_with_Copilot_Studio')?['body/invoice_date']}",
+          "dueDate": "@{outputs('Extract_with_Copilot_Studio')?['body/due_date']}",
+          "currencyCode": "@{outputs('Extract_with_Copilot_Studio')?['body/currency_code']}"
+        }
+      }
+    },
+    {
+      "name": "Attach_original_document",
+      "type": "BusinessCentral.CreateRecord",
+      "inputs": {
+        "table": "attachments",
+        "parentId": "@{outputs('Create_purchase_invoice_in_BC')?['body/id']}",
+        "fields": {
+          "fileName": "@{first(triggerOutputs()?['body/attachments'])?['name']}",
+          "contentBytes": "@{first(triggerOutputs()?['body/attachments'])?['contentBytes']}"
+        }
+      }
+    },
+    {
+      "name": "Notify_on_success",
+      "type": "Teams.PostMessage",
+      "inputs": {
+        "channel": "Accounts Payable",
+        "message": "Posted invoice @{outputs('Extract_with_Copilot_Studio')?['body/invoice_number']} from @{triggerOutputs()?['body/from']} to Business Central."
+      }
+    }
+  ],
+  "errorHandling": [
+    {
+      "name": "On_failure_notify_AP",
+      "type": "Office365Outlook.SendEmailV2",
+      "runAfter": { "Create_purchase_invoice_in_BC": ["Failed", "TimedOut"] },
+      "inputs": {
+        "to": "accounts-payable@yourcompany.example.com",
+        "subject": "Vendor document processing failed",
+        "body": "Flow @{workflow().name} failed for message @{triggerOutputs()?['body/subject']}."
+      }
+    }
+  ]
+}
