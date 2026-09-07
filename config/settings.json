@@ -1,0 +1,13 @@
+{
+  "mailbox": "vendor-invoices@yourcompany.example.com",
+  "vendor_store_path": "config/vendors.json",
+  "bc_base_url": "https://api.businesscentral.dynamics.com",
+  "bc_environment": "production",
+  "bc_company": "CRONUS International Ltd.",
+  "bc_tenant_id": "<your-entra-tenant-id>",
+  "bc_client_id": "<your-app-registration-client-id>",
+  "bc_client_secret_env": "BC_CLIENT_SECRET",
+  "copilot_studio_endpoint": "",
+  "power_automate_webhook_env": "POWER_AUTOMATE_WEBHOOK_URL",
+  "required_attachment_extensions": [".pdf", ".png", ".jpg", ".jpeg", ".tif", ".tiff"]
+}

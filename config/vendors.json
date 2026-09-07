@@ -1,0 +1,32 @@
+{
+  "description": "Vendor store: the allow-list of vendors whose emailed documents are processed. Mirrors the Dataverse table maintained by the Vendor Store Power App.",
+  "vendors": [
+    {
+      "name": "Contoso Office Supplies",
+      "vendor_no": "V00010",
+      "email_addresses": ["invoices@contoso.example.com"],
+      "email_domains": ["contoso.example.com"],
+      "default_document_type": "Invoice",
+      "currency_code": "USD",
+      "active": true
+    },
+    {
+      "name": "Fabrikam Components",
+      "vendor_no": "V00020",
+      "email_addresses": ["billing@fabrikam.example.org"],
+      "email_domains": ["fabrikam.example.org"],
+      "default_document_type": "Invoice",
+      "currency_code": "EUR",
+      "active": true
+    },
+    {
+      "name": "Northwind Traders",
+      "vendor_no": "V00030",
+      "email_addresses": ["ap@northwindtraders.example.net"],
+      "email_domains": ["northwindtraders.example.net"],
+      "default_document_type": "Invoice",
+      "currency_code": "USD",
+      "active": false
+    }
+  ]
+}
